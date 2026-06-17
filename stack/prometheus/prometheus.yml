@@ -7,12 +7,12 @@ rule_files:
 
 scrape_configs:
   # シミュレータが公開する衛星ヘルスの業務メトリクス + プロセスメトリクス
+  # （sat ラベルはアプリ側メトリクスが持つためここでは付与しない）
   - job_name: satellite
     static_configs:
       - targets: ["simulator:8000"]
         labels:
           mission: spaceops
-          sat: SAT-1
 
   # Prometheus 自身
   - job_name: prometheus
