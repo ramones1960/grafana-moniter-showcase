@@ -1,0 +1,52 @@
+groups:
+  - name: satellite-fdir
+    rules:
+      - alert: BatteryLow
+        expr: sat_battery_soc_percent < 30
+        for: 30s
+        labels:
+          severity: warning
+          subsystem: eps
+        annotations:
+          summary: "Battery SoC low ({{ $value | printf \"%.1f\" }}%)"
+          description: "衛星バッテリー残量が 30% を下回っています。負荷分離を検討。"
+
+      - alert: BatteryCritical
+        expr: sat_battery_soc_percent < 20
+        for: 10s
+        labels:
+          severity: critical
+          subsystem: eps
+        annotations:
+          summary: "Battery SoC CRITICAL ({{ $value | printf \"%.1f\" }}%)"
+          description: "セーフモード移行レベル。非必須負荷を全て遮断。"
+
+      - alert: ThermalHigh
+        expr: sat_temperature_celsius > 55
+        for: 30s
+        labels:
+          severity: warning
+          subsystem: tcs
+        annotations:
+          summary: "Zone {{ $labels.zone }} over-temperature ({{ $value | printf \"%.1f\" }}C)"
+          description: "サブシステム温度が上限を超過。"
+
+      - alert: AttitudeLoss
+        expr: sat_pointing_error_degrees > 5
+        for: 20s
+        labels:
+          severity: critical
+          subsystem: adcs
+        annotations:
+          summary: "Pointing error high ({{ $value | printf \"%.2f\" }} deg)"
+          description: "ポインティング誤差が許容値を超過。タンブリングの可能性。"
+
+      - alert: DataBufferFull
+        expr: sat_data_buffer_percent > 90
+        for: 30s
+        labels:
+          severity: warning
+          subsystem: obc
+        annotations:
+          summary: "Onboard data buffer near full ({{ $value | printf \"%.0f\" }}%)"
+          description: "次のダウンリンクパスまでにデータ溢れの恐れ。"

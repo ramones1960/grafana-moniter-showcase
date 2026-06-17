@@ -1,0 +1,41 @@
+apiVersion: 1
+
+# ① 各種DB連携を「データソース as code」で宣言。
+# 環境変数 (${VAR}) は docker-compose から渡され、Grafana が起動時に展開する。
+
+datasources:
+  # 衛星テレメトリ（高頻度時系列）
+  - name: InfluxDB
+    uid: influxdb
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: Flux
+      organization: ${INFLUXDB_ORG}
+      defaultBucket: ${INFLUXDB_BUCKET}
+    secureJsonData:
+      token: ${INFLUXDB_TOKEN}
+
+  # 地上局/ミッション台帳（リレーショナル + 時系列）
+  - name: TimescaleDB
+    uid: timescaledb
+    type: postgres
+    access: proxy
+    url: timescaledb:5432
+    user: ${TIMESCALE_USER}
+    jsonData:
+      database: ${TIMESCALE_DB}
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: true
+    secureJsonData:
+      password: ${TIMESCALE_PASSWORD}
+
+  # リソース/業務メトリクス監視
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
