@@ -1,0 +1,402 @@
+{
+  "uid": "ground-ops",
+  "title": "📡 Ground Station Ops",
+  "tags": [
+    "space",
+    "ground",
+    "timescaledb"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Contacts (24h)",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT count(*) FROM passes WHERE aos > now() - interval '24 hours'",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Downlinked (24h)",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT coalesce(sum(data_downlinked_mb),0) FROM passes WHERE aos > now() - interval '24 hours'",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Active Pass",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT count(*) FROM passes WHERE status = 'in_progress'",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-gray",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Ground Stations",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT count(*) FROM ground_stations",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Pass Max Elevation",
+      "type": "timeseries",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 16,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT p.aos AS time, p.max_elevation_deg AS elevation, g.code AS metric FROM passes p JOIN ground_stations g ON g.id = p.station_id WHERE p.max_elevation_deg IS NOT NULL ORDER BY p.aos",
+          "rawQuery": true,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "degree",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Downlink by Station (MB)",
+      "type": "barchart",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 5,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT g.name AS station, sum(p.data_downlinked_mb) AS mb FROM passes p JOIN ground_stations g ON g.id = p.station_id GROUP BY g.name ORDER BY mb DESC",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Recent Passes",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 16,
+        "h": 11
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT g.name AS station, p.aos, p.los, round(p.max_elevation_deg::numeric,1) AS max_el_deg, p.duration_s, round(p.data_downlinked_mb::numeric,0) AS dl_mb, p.status FROM passes p JOIN ground_stations g ON g.id = p.station_id ORDER BY p.aos DESC LIMIT 20",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 8,
+      "title": "Station Master",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 13,
+        "w": 8,
+        "h": 11
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT code, name, country, latitude_deg, longitude_deg, min_elevation_deg FROM ground_stations ORDER BY code",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

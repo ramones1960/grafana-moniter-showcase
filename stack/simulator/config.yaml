@@ -1,0 +1,49 @@
+# 模擬衛星・地上局・地球観測ターゲットの定義
+
+satellite:
+  name: SAT-1
+  # 太陽同期軌道 (SSO) 想定の地球観測衛星
+  altitude_km: 567.0
+  inclination_deg: 97.6
+  raan_deg: 22.5
+
+power:
+  battery_capacity_wh: 200.0     # バッテリ容量
+  initial_soc_pct: 78.0
+  solar_generation_w: 165.0      # 日照時の最大発電（食時放電とほぼ釣り合う設計）
+  base_load_w: 95.0              # 常時負荷
+  comms_load_w: 40.0             # ダウンリンク時の追加負荷
+  payload_load_w: 60.0           # 撮像時の追加負荷
+  bus_voltage_full_v: 29.4       # SoC100%時
+  bus_voltage_empty_v: 24.0      # SoC0%時
+
+thermal:
+  # ゾーンごとの [日照時平衡温度, 食時平衡温度, 時定数(sim秒)]
+  zones:
+    battery:  { sun: 22.0, eclipse: 8.0,  tau: 900 }
+    obc:      { sun: 35.0, eclipse: 20.0, tau: 600 }
+    payload:  { sun: 28.0, eclipse: 5.0,  tau: 700 }
+    panel_px: { sun: 65.0, eclipse: -40.0, tau: 300 }   # +X パネル外側
+    panel_mx: { sun: 60.0, eclipse: -45.0, tau: 300 }
+
+attitude:
+  pointing_error_nominal_deg: 0.4
+  reaction_wheel_nominal_rpm: 2400
+
+comms:
+  downlink_rate_max_mbps: 150.0
+  snr_max_db: 22.0
+  snr_min_db: 3.0
+
+mission:
+  data_buffer_capacity_gb: 256.0
+  capture_size_mb: 850.0          # 1キャプチャあたりのサイズ
+  # 撮像ターゲット（直下点が近接かつ日照時に撮像）
+  targets:
+    - { name: "Tokyo Bay",      lat: 35.5,  lon: 139.8 }
+    - { name: "Amazon Basin",   lat: -3.4,  lon: -62.2 }
+    - { name: "Sahara",         lat: 23.4,  lon: 12.5 }
+    - { name: "Greenland Ice",  lat: 72.0,  lon: -40.0 }
+    - { name: "Himalaya",       lat: 28.0,  lon: 86.9 }
+    - { name: "California",     lat: 36.7,  lon: -119.4 }
+    - { name: "Australia Out.", lat: -25.0, lon: 133.0 }

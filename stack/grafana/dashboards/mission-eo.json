@@ -1,0 +1,381 @@
+{
+  "uid": "mission-eo",
+  "title": "🌍 Mission & Earth Observation",
+  "tags": [
+    "space",
+    "mission",
+    "timescaledb"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Captures (24h)",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 5,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT count(*) FROM eo_captures WHERE captured_at > now() - interval '24 hours'",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Imaged Data (24h)",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 0,
+        "w": 5,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT coalesce(sum(size_mb),0) FROM eo_captures WHERE captured_at > now() - interval '24 hours'",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Onboard (not downlinked)",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 0,
+        "w": 5,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT count(*) FROM eo_captures WHERE status = 'onboard'",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Captures by Mode",
+      "type": "piechart",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 9,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT mode, count(*) AS n FROM eo_captures GROUP BY mode",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "placement": "right"
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Capture Footprints",
+      "type": "geomap",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 15,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT captured_at AS time, latitude_deg, longitude_deg, target_name, size_mb FROM eo_captures ORDER BY captured_at DESC LIMIT 200",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "options": {
+        "view": {
+          "id": "zero",
+          "lat": 20,
+          "lon": 0,
+          "zoom": 1.5
+        },
+        "basemap": {
+          "type": "default",
+          "name": "Basemap"
+        },
+        "layers": [
+          {
+            "type": "markers",
+            "name": "captures",
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude_deg",
+              "longitude": "longitude_deg"
+            },
+            "config": {
+              "showLegend": true,
+              "style": {
+                "color": {
+                  "fixed": "orange"
+                },
+                "size": {
+                  "fixed": 6
+                }
+              }
+            }
+          }
+        ],
+        "controls": {
+          "showZoom": true,
+          "showAttribution": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Onboard Data Buffer",
+      "type": "timeseries",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT ts AS time, value FROM mission_kpi WHERE metric = 'data_buffer_pct' ORDER BY ts",
+          "rawQuery": true,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Recent EO Captures",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT captured_at, target_name, mode, frames, round(size_mb::numeric,0) AS size_mb, round(cloud_cover_pct::numeric,0) AS cloud_pct, status FROM eo_captures ORDER BY captured_at DESC LIMIT 20",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

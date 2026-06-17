@@ -1,0 +1,114 @@
+name: grafana-space-showcase
+
+services:
+  # ── 衛星テレメトリ用 時系列DB ─────────────────────────
+  influxdb:
+    image: influxdb:2.7
+    container_name: spaceops-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_ADMIN_USER}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_ADMIN_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN}
+    volumes:
+      - influx-data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── 地上局/ミッション台帳用 RDB(時系列) ───────────────
+  timescaledb:
+    image: timescale/timescaledb:2.17.2-pg16
+    container_name: spaceops-timescaledb
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${TIMESCALE_DB}
+      POSTGRES_USER: ${TIMESCALE_USER}
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD}
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+      - ./timescaledb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TIMESCALE_USER} -d ${TIMESCALE_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── リソース/業務メトリクス監視 ───────────────────────
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: spaceops-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prom-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+
+  # ── 模擬テレメトリ生成器 ──────────────────────────────
+  simulator:
+    build: ./simulator
+    container_name: spaceops-simulator
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG: ${INFLUXDB_ORG}
+      INFLUXDB_BUCKET: ${INFLUXDB_BUCKET}
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_DB: ${TIMESCALE_DB}
+      TIMESCALE_USER: ${TIMESCALE_USER}
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD}
+      SIM_INTERVAL_SEC: ${SIM_INTERVAL_SEC}
+      SIM_TIME_SCALE: ${SIM_TIME_SCALE}
+      PROM_PORT: "8000"
+    ports:
+      - "8000:8000"   # /metrics (Prometheus がスクレイプ)
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── 可視化 ────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: spaceops-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
+      GF_SECURITY_ALLOW_EMBEDDING: ${GF_ALLOW_EMBEDDING}
+      GF_USERS_DEFAULT_THEME: dark
+      # provisioning がトークン/接続情報を埋め込むために環境変数を渡す
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG: ${INFLUXDB_ORG}
+      INFLUXDB_BUCKET: ${INFLUXDB_BUCKET}
+      TIMESCALE_DB: ${TIMESCALE_DB}
+      TIMESCALE_USER: ${TIMESCALE_USER}
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - influxdb
+      - timescaledb
+      - prometheus
+
+volumes:
+  influx-data:
+  timescale-data:
+  prom-data:
+  grafana-data:
