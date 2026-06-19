@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "panel",
+  "name": "Satellite Status Panel",
+  "id": "myorg-satellite-status-panel",
+  "info": {
+    "description": "Displays satellite subsystem status in a mission control style with threshold-based color coding",
+    "author": {
+      "name": "My Organization"
+    },
+    "keywords": ["satellite", "status", "space", "mission", "telemetry"],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [],
+    "screenshots": [],
+    "version": "1.0.0",
+    "updated": "2026-06-19"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=10.0.0",
+    "plugins": []
+  }
+}
