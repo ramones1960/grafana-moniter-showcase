@@ -61,7 +61,11 @@ grafana-moniter-showcase/
 ├── catalog/                   # 拡張カタログ（段階的に追加していく評価メニュー）
 │   ├── datasources/           #   ① 各種DB連携の評価カタログ
 │   ├── frontend-embed/        #   ② フロントエンド集約パターン
-│   └── resource-monitoring/   #   ③ リソース監視の深掘り（exporter別）
+│   ├── resource-monitoring/   #   ③ リソース監視の深掘り（exporter別）
+│   └── plugins/               #   ④ Grafana プラグイン自作チュートリアル
+│       ├── 01-panel-plugin/   #      パネルプラグイン（衛星ステータス表示）
+│       ├── 02-datasource-plugin/ #   データソースプラグイン（TLE 軌道データ）
+│       └── 03-app-plugin/     #      アプリプラグイン（管制ポータル）
 └── Makefile                   # 統一エントリポイント
 ```
 
@@ -87,6 +91,7 @@ grafana-moniter-showcase/
 - [ ] `catalog/frontend-embed/`: React アプリへの埋め込みサンプル実装
 - [ ] `catalog/resource-monitoring/`: node / cAdvisor / blackbox exporter の個別深掘り
 - [ ] Grafana Alerting → 通知連携（Slack / Webhook）のサンプル
+- [x] `catalog/plugins/`: Grafana プラグイン自作チュートリアル（パネル・DS・アプリ）
 
 ---
 
