@@ -87,3 +87,37 @@ grafana-moniter-showcase/
 - [ ] `catalog/frontend-embed/`: React アプリへの埋め込みサンプル実装
 - [ ] `catalog/resource-monitoring/`: node / cAdvisor / blackbox exporter の個別深掘り
 - [ ] Grafana Alerting → 通知連携（Slack / Webhook）のサンプル
+
+---
+
+## 将来方針: OpenTelemetry (OTel) への対応
+
+現在のリソース監視は **Prometheus + exporter** の構成（メトリクスのみ）だが、
+将来的に **OpenTelemetry** への移行・統合を検討している。
+
+### 背景
+
+Prometheus exporter はメトリクス収集に特化しており、ログ・トレースは別途スタックが必要になる。
+OpenTelemetry はメトリクス・ログ・トレースを単一の標準 SDK / Collector で扱える業界標準として台頭しており、
+Grafana も LGTM スタック（Loki・Grafana・Tempo・Mimir）で OTel をファーストクラスサポートしている。
+
+### 想定するアーキテクチャ
+
+```
+機器 / アプリ / カスタム exporter
+  └── OpenTelemetry Collector（エージェント）
+        ├── metrics → Prometheus / Mimir（既存 Grafana ダッシュボードと互換）
+        ├── logs    → Loki
+        └── traces  → Tempo
+              └── Grafana で一元可視化
+```
+
+現時点のカスタム exporter（`prometheus_client` ベース）は OTel の metrics SDK へ段階的に置き換え可能であり、
+Grafana ダッシュボードは PromQL 互換のまま継続利用できる。
+
+### 検討中の対応項目
+
+- [ ] OTel Collector を `stack/` に追加し、既存 Prometheus スクレイプと並走させる PoC
+- [ ] シミュレータの `PromSink` を OTel SDK（`opentelemetry-sdk`）に移行する評価
+- [ ] Loki によるログ収集を追加し、メトリクスとログを Grafana で相関表示
+- [ ] 地上系機器（アンテナ制御装置等）向けカスタム OTel Receiver の設計
