@@ -324,6 +324,23 @@
             "lineWidth": 2,
             "fillOpacity": 8,
             "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
           }
         },
         "overrides": []
@@ -336,13 +353,16 @@
         },
         "tooltip": {
           "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
         }
       }
     },
     {
       "id": 7,
-      "title": "Recent EO Captures",
-      "type": "table",
+      "title": "Solar Generation (KPI)",
+      "type": "timeseries",
       "datasource": {
         "type": "postgres",
         "uid": "timescaledb"
@@ -360,7 +380,56 @@
             "type": "postgres",
             "uid": "timescaledb"
           },
-          "rawSql": "SELECT captured_at, target_name, mode, frames, round(size_mb::numeric,0) AS size_mb, round(cloud_cover_pct::numeric,0) AS cloud_pct, status FROM eo_captures ORDER BY captured_at DESC LIMIT 20",
+          "rawSql": "SELECT ts AS time, value FROM mission_kpi WHERE metric = 'solar_generation_w' ORDER BY ts",
+          "rawQuery": true,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Recent EO Captures",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT captured_at AS \"撮像時刻\", target_name AS \"ターゲット\", mode AS \"モード\", frames AS \"フレーム数\", round(size_mb::numeric,0) AS \"サイズ(MB)\", round(cloud_cover_pct::numeric,0) AS \"雲量%\", status AS \"状態\" FROM eo_captures ORDER BY captured_at DESC LIMIT 20",
           "rawQuery": true,
           "format": "table"
         }

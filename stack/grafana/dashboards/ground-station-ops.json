@@ -9,9 +9,9 @@
   "schemaVersion": 39,
   "version": 1,
   "editable": true,
-  "refresh": "5s",
+  "refresh": "10s",
   "time": {
-    "from": "now-15m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
@@ -33,7 +33,7 @@
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 6,
+        "w": 5,
         "h": 5
       },
       "targets": [
@@ -83,9 +83,9 @@
         "uid": "timescaledb"
       },
       "gridPos": {
-        "x": 6,
+        "x": 5,
         "y": 0,
-        "w": 6,
+        "w": 5,
         "h": 5
       },
       "targets": [
@@ -135,9 +135,9 @@
         "uid": "timescaledb"
       },
       "gridPos": {
-        "x": 12,
+        "x": 10,
         "y": 0,
-        "w": 6,
+        "w": 5,
         "h": 5
       },
       "targets": [
@@ -191,9 +191,9 @@
         "uid": "timescaledb"
       },
       "gridPos": {
-        "x": 18,
+        "x": 15,
         "y": 0,
-        "w": 6,
+        "w": 4,
         "h": 5
       },
       "targets": [
@@ -236,6 +236,294 @@
     },
     {
       "id": 5,
+      "title": "Predicted Passes (5 orbits)",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 0,
+        "w": 5,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT count(*) FROM predicted_passes WHERE sat='SAT-1' AND t_aos > now()",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "semi-dark-orange",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "title": "📅 予測コンタクトウィンドウ (次回 5 周回)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "title": "次回 AOS まで",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (pp.t_aos - now()))::integer AS \"次回AOSまで(秒)\", g.code AS \"局\", round(pp.max_elevation_deg::numeric, 1) AS \"最大仰角°\", pp.duration_s AS \"継続時間(秒)\" FROM predicted_passes pp JOIN ground_stations g ON g.id = pp.station_id WHERE pp.sat = 'SAT-1' AND pp.t_aos > now() ORDER BY pp.t_aos LIMIT 1",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 120
+              },
+              {
+                "color": "green",
+                "value": 300
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 8,
+      "title": "次回コンタクト局",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 6,
+        "w": 4,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT g.code AS station FROM predicted_passes pp JOIN ground_stations g ON g.id = pp.station_id WHERE pp.sat = 'SAT-1' AND pp.t_aos > now() ORDER BY pp.t_aos LIMIT 1",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "string",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 9,
+      "title": "次回パス最大仰角",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 6,
+        "w": 4,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT round(pp.max_elevation_deg::numeric, 1) AS max_el FROM predicted_passes pp WHERE pp.sat = 'SAT-1' AND pp.t_aos > now() ORDER BY pp.t_aos LIMIT 1",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "degree",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 45
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 10,
+      "title": "予測パス一覧 (次回 5 周回)",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescaledb"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 6,
+        "w": 10,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescaledb"
+          },
+          "rawSql": "SELECT   g.code AS \"局\",   pp.t_aos AS \"予測AOS\",   pp.t_los AS \"予測LOS\",   pp.duration_s AS \"継続(秒)\",   round(pp.max_elevation_deg::numeric, 1) AS \"最大仰角°\",   round(pp.rise_az_deg::numeric, 0) AS \"上昇方位°\",   round(pp.max_az_deg::numeric, 0) AS \"最大仰角方位°\",   round(pp.set_az_deg::numeric, 0) AS \"沈下方位°\" FROM predicted_passes pp JOIN ground_stations g ON g.id = pp.station_id WHERE pp.sat = 'SAT-1' AND pp.t_aos > now() ORDER BY pp.t_aos LIMIT 12",
+          "rawQuery": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 11,
+      "title": "📡 コンタクト実績",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
       "title": "Pass Max Elevation",
       "type": "timeseries",
       "datasource": {
@@ -244,8 +532,8 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 5,
-        "w": 16,
+        "y": 17,
+        "w": 14,
         "h": 8
       },
       "targets": [
@@ -268,6 +556,23 @@
             "lineWidth": 2,
             "fillOpacity": 8,
             "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "green",
+                "value": 30
+              }
+            ]
           }
         },
         "overrides": []
@@ -280,11 +585,14 @@
         },
         "tooltip": {
           "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
         }
       }
     },
     {
-      "id": 6,
+      "id": 13,
       "title": "Downlink by Station (MB)",
       "type": "barchart",
       "datasource": {
@@ -292,9 +600,9 @@
         "uid": "timescaledb"
       },
       "gridPos": {
-        "x": 16,
-        "y": 5,
-        "w": 8,
+        "x": 14,
+        "y": 17,
+        "w": 10,
         "h": 8
       },
       "targets": [
@@ -323,7 +631,7 @@
       }
     },
     {
-      "id": 7,
+      "id": 14,
       "title": "Recent Passes",
       "type": "table",
       "datasource": {
@@ -332,9 +640,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 25,
         "w": 16,
-        "h": 11
+        "h": 12
       },
       "targets": [
         {
@@ -343,7 +651,7 @@
             "type": "postgres",
             "uid": "timescaledb"
           },
-          "rawSql": "SELECT g.name AS station, p.aos, p.los, round(p.max_elevation_deg::numeric,1) AS max_el_deg, p.duration_s, round(p.data_downlinked_mb::numeric,0) AS dl_mb, p.status FROM passes p JOIN ground_stations g ON g.id = p.station_id ORDER BY p.aos DESC LIMIT 20",
+          "rawSql": "SELECT g.code AS 局, p.aos AS AOS, p.los AS LOS, round(p.max_elevation_deg::numeric,1) AS \"最大仰角°\", round(p.rise_az_deg::numeric,0) AS \"上昇方位°\", round(p.set_az_deg::numeric,0) AS \"沈下方位°\", p.duration_s AS \"継続(秒)\", round(p.data_downlinked_mb::numeric,0) AS \"DL(MB)\", p.status FROM passes p JOIN ground_stations g ON g.id = p.station_id ORDER BY p.aos DESC LIMIT 15",
           "rawQuery": true,
           "format": "table"
         }
@@ -361,7 +669,7 @@
       }
     },
     {
-      "id": 8,
+      "id": 15,
       "title": "Station Master",
       "type": "table",
       "datasource": {
@@ -370,9 +678,9 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 13,
+        "y": 25,
         "w": 8,
-        "h": 11
+        "h": 12
       },
       "targets": [
         {
@@ -381,7 +689,7 @@
             "type": "postgres",
             "uid": "timescaledb"
           },
-          "rawSql": "SELECT code, name, country, latitude_deg, longitude_deg, min_elevation_deg FROM ground_stations ORDER BY code",
+          "rawSql": "SELECT code AS コード, name AS 局名, country AS 国, latitude_deg AS 緯度, longitude_deg AS 経度, min_elevation_deg AS \"最小仰角°\" FROM ground_stations ORDER BY code",
           "rawQuery": true,
           "format": "table"
         }

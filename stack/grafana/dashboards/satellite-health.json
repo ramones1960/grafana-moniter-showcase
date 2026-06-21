@@ -11,7 +11,7 @@
   "editable": true,
   "refresh": "5s",
   "time": {
-    "from": "now-15m",
+    "from": "now-20m",
     "to": "now"
   },
   "timepicker": {},
@@ -46,7 +46,7 @@
       "gridPos": {
         "x": 0,
         "y": 1,
-        "w": 6,
+        "w": 5,
         "h": 8
       },
       "targets": [
@@ -101,9 +101,9 @@
         "uid": "influxdb"
       },
       "gridPos": {
-        "x": 6,
+        "x": 5,
         "y": 1,
-        "w": 9,
+        "w": 7,
         "h": 8
       },
       "targets": [
@@ -124,6 +124,19 @@
             "lineWidth": 2,
             "fillOpacity": 8,
             "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 24.5
+              },
+              {
+                "color": "green",
+                "value": 26.0
+              }
+            ]
           }
         },
         "overrides": []
@@ -136,21 +149,24 @@
         },
         "tooltip": {
           "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
         }
       }
     },
     {
       "id": 4,
-      "title": "Net Power",
+      "title": "Solar Generation",
       "type": "timeseries",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb"
       },
       "gridPos": {
-        "x": 15,
+        "x": 12,
         "y": 1,
-        "w": 9,
+        "w": 7,
         "h": 8
       },
       "targets": [
@@ -160,7 +176,7 @@
             "type": "influxdb",
             "uid": "influxdb"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"power\" and r._field == \"net_power_w\")\n  |> filter(fn: (r) => r.sat == \"SAT-1\")"
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"power\" and r._field == \"solar_generation_w\")\n  |> filter(fn: (r) => r.sat == \"SAT-1\")"
         }
       ],
       "fieldConfig": {
@@ -188,6 +204,69 @@
     },
     {
       "id": 5,
+      "title": "Net Power",
+      "type": "timeseries",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 1,
+        "w": 5,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"power\" and r._field == \"net_power_w\")\n  |> filter(fn: (r) => r.sat == \"SAT-1\")"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
+        }
+      }
+    },
+    {
+      "id": 6,
       "title": "🌡 熱 TCS",
       "type": "row",
       "collapsed": false,
@@ -200,7 +279,7 @@
       "panels": []
     },
     {
-      "id": 6,
+      "id": 7,
       "title": "Zone Temperatures",
       "type": "timeseries",
       "datasource": {
@@ -210,7 +289,7 @@
       "gridPos": {
         "x": 0,
         "y": 10,
-        "w": 16,
+        "w": 14,
         "h": 8
       },
       "targets": [
@@ -231,6 +310,23 @@
             "lineWidth": 2,
             "fillOpacity": 8,
             "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 40
+              },
+              {
+                "color": "red",
+                "value": 55
+              }
+            ]
           }
         },
         "overrides": []
@@ -243,11 +339,14 @@
         },
         "tooltip": {
           "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
         }
       }
     },
     {
-      "id": 7,
+      "id": 8,
       "title": "Battery Temp",
       "type": "timeseries",
       "datasource": {
@@ -255,9 +354,9 @@
         "uid": "influxdb"
       },
       "gridPos": {
-        "x": 16,
+        "x": 14,
         "y": 10,
-        "w": 8,
+        "w": 6,
         "h": 8
       },
       "targets": [
@@ -278,6 +377,23 @@
             "lineWidth": 2,
             "fillOpacity": 8,
             "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "green",
+                "value": 10
+              }
+            ]
           }
         },
         "overrides": []
@@ -290,11 +406,68 @@
         },
         "tooltip": {
           "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
         }
       }
     },
     {
-      "id": 8,
+      "id": 9,
+      "title": "Battery Heater",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 10,
+        "w": 4,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"power\" and r._field == \"heater_on\")\n  |> filter(fn: (r) => r.sat == \"SAT-1\")"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 10,
       "title": "🛰 姿勢 ADCS",
       "type": "row",
       "collapsed": false,
@@ -307,7 +480,7 @@
       "panels": []
     },
     {
-      "id": 9,
+      "id": 11,
       "title": "Pointing Error",
       "type": "gauge",
       "datasource": {
@@ -317,7 +490,7 @@
       "gridPos": {
         "x": 0,
         "y": 19,
-        "w": 6,
+        "w": 5,
         "h": 8
       },
       "targets": [
@@ -364,7 +537,7 @@
       }
     },
     {
-      "id": 10,
+      "id": 12,
       "title": "Body Rates",
       "type": "timeseries",
       "datasource": {
@@ -372,9 +545,9 @@
         "uid": "influxdb"
       },
       "gridPos": {
-        "x": 6,
+        "x": 5,
         "y": 19,
-        "w": 9,
+        "w": 10,
         "h": 8
       },
       "targets": [
@@ -411,7 +584,7 @@
       }
     },
     {
-      "id": 11,
+      "id": 13,
       "title": "Reaction Wheel RPM",
       "type": "timeseries",
       "datasource": {
@@ -442,6 +615,23 @@
             "lineWidth": 2,
             "fillOpacity": 8,
             "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 4500
+              },
+              {
+                "color": "red",
+                "value": 5200
+              }
+            ]
           }
         },
         "overrides": []
@@ -454,11 +644,14 @@
         },
         "tooltip": {
           "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
         }
       }
     },
     {
-      "id": 12,
+      "id": 14,
       "title": "📶 通信 COMM",
       "type": "row",
       "collapsed": false,
@@ -471,7 +664,7 @@
       "panels": []
     },
     {
-      "id": 13,
+      "id": 15,
       "title": "Downlink SNR",
       "type": "timeseries",
       "datasource": {
@@ -502,6 +695,23 @@
             "lineWidth": 2,
             "fillOpacity": 8,
             "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 6
+              },
+              {
+                "color": "green",
+                "value": 10
+              }
+            ]
           }
         },
         "overrides": []
@@ -514,11 +724,14 @@
         },
         "tooltip": {
           "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
         }
       }
     },
     {
-      "id": 14,
+      "id": 16,
       "title": "Downlink Rate",
       "type": "timeseries",
       "datasource": {
@@ -562,6 +775,190 @@
         "tooltip": {
           "mode": "multi"
         }
+      }
+    },
+    {
+      "id": 17,
+      "title": "🌐 軌道",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "panels": []
+    },
+    {
+      "id": 18,
+      "title": "β角 (軌道面-太陽角)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"orbit\" and r._field == \"beta_deg\")\n  |> filter(fn: (r) => r.sat == \"SAT-1\")"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "degree",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 65
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "thresholdsStyle": {
+          "mode": "line"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "title": "Eclipse",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"orbit\" and r._field == \"eclipse\")\n  |> filter(fn: (r) => r.sat == \"SAT-1\")"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "dark-blue",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 20,
+      "title": "Altitude",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 37,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"orbit\" and r._field == \"alt_km\")\n  |> filter(fn: (r) => r.sat == \"SAT-1\")"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "km",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
       }
     }
   ]

@@ -48,7 +48,10 @@ class InfluxSink:
                    .field("bus_voltage_v", p["bus_voltage_v"])
                    .field("battery_soc_pct", p["battery_soc_pct"])
                    .field("battery_temp_c", p["battery_temp_c"])
-                   .field("net_power_w", p["net_power_w"]).time(ts))
+                   .field("solar_generation_w", p["solar_generation_w"])
+                   .field("net_power_w", p["net_power_w"])
+                   .field("heater_on", p["heater_on"])
+                   .time(ts))
 
         for zone, t in tele["thermal"].items():
             pts.append(Point("thermal").tag("sat", sat).tag("zone", zone)
@@ -60,7 +63,9 @@ class InfluxSink:
                    .field("roll_rate_dps", a["roll_rate_dps"])
                    .field("pitch_rate_dps", a["pitch_rate_dps"])
                    .field("yaw_rate_dps", a["yaw_rate_dps"])
-                   .field("reaction_wheel_rpm", a["reaction_wheel_rpm"]).time(ts))
+                   .field("reaction_wheel_rpm", a["reaction_wheel_rpm"])
+                   .field("desaturating", a["desaturating"])
+                   .time(ts))
 
         c = tele["comms"]
         pts.append(Point("comms").tag("sat", sat).tag("station", c["station"] or "none")
@@ -114,14 +119,16 @@ class TimescaleSink:
             return cur.fetchone()[0]
 
     def close_pass(self, pass_id: int, aos: datetime, los: datetime,
-                   max_el: float, downlinked_mb: float):
+                   max_el: float, downlinked_mb: float,
+                   rise_az: float = 0.0, set_az: float = 0.0):
         with self.conn.cursor() as cur:
             cur.execute(
                 "UPDATE passes SET los=%s, max_elevation_deg=%s, "
-                "duration_s=%s, data_downlinked_mb=%s, status='completed' "
+                "duration_s=%s, data_downlinked_mb=%s, "
+                "rise_az_deg=%s, set_az_deg=%s, status='completed' "
                 "WHERE id=%s AND aos=%s",
                 (los, max_el, int((los - aos).total_seconds()),
-                 downlinked_mb, pass_id, aos),
+                 downlinked_mb, rise_az, set_az, pass_id, aos),
             )
 
     def add_capture(self, sat: str, ts: datetime, target: str, lat: float,
@@ -156,18 +163,63 @@ class TimescaleSink:
                 "VALUES (%s,%s,%s,%s,%s)",
                 (ts, sat, subsystem, severity, message))
 
+    def insert_predicted_passes(self, sat: str, predictions,
+                                time_scale: float, wall_start: float):
+        """将来パス予測を DB に挿入する.
+
+        既存の未来予測を削除してから新規予測を挿入する。
+        PredictedPass の t_aos / t_los はシミュレーション秒 (wall_start からの
+        sim-s) なので、実UTC = wall_start + sim_t / time_scale で変換する。
+
+        Args:
+            predictions: list of PredictedPass (orbit.py)
+            time_scale: シミュレーション加速倍率
+            wall_start: シミュレーション開始 wall clock (time.time())
+        """
+        with self.conn.cursor() as cur:
+            # 未来の予測エントリを削除
+            cur.execute(
+                "DELETE FROM predicted_passes WHERE sat=%s AND t_aos > now()",
+                (sat,),
+            )
+            inserted = 0
+            for p in predictions:
+                real_aos = wall_start + p.t_aos / time_scale
+                real_los = wall_start + p.t_los / time_scale
+                dt_aos = datetime.fromtimestamp(real_aos, tz=timezone.utc)
+                dt_los = datetime.fromtimestamp(real_los, tz=timezone.utc)
+                sid = self.stations.get(p.station)
+                if sid is None:
+                    continue
+                real_duration = max(0, int((real_los - real_aos)))
+                cur.execute(
+                    "INSERT INTO predicted_passes "
+                    "(sat, station_id, t_aos, t_los, max_elevation_deg, "
+                    "rise_az_deg, max_az_deg, set_az_deg, duration_s) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (sat, sid, dt_aos, dt_los, p.max_el,
+                     p.rise_az, p.max_az, p.set_az, real_duration),
+                )
+                inserted += 1
+        print(f"[sinks] {inserted} パス予測を挿入 ({sat})", flush=True)
+
 
 # ── Prometheus (業務メトリクス) ─────────────────────────
 class PromSink:
     def __init__(self, port: int):
         self.soc = Gauge("sat_battery_soc_percent", "Battery state of charge", ["sat"])
         self.volt = Gauge("sat_bus_voltage_volts", "Bus voltage", ["sat"])
+        self.solar = Gauge("sat_solar_generation_watts", "Solar panel generation", ["sat"])
+        self.net_pwr = Gauge("sat_net_power_watts", "Net power (gen - load)", ["sat"])
+        self.heater = Gauge("sat_battery_heater_active", "Battery heater active", ["sat"])
         self.temp = Gauge("sat_temperature_celsius", "Subsystem temperature",
                           ["sat", "zone"])
         self.point_err = Gauge("sat_pointing_error_degrees", "ADCS pointing error",
                                ["sat"])
+        self.rw_rpm = Gauge("sat_reaction_wheel_rpm", "Reaction wheel speed", ["sat"])
         self.downlink = Gauge("sat_downlink_rate_mbps", "Downlink rate", ["sat"])
         self.eclipse = Gauge("sat_in_eclipse", "1 if in eclipse", ["sat"])
+        self.beta = Gauge("sat_beta_angle_degrees", "Solar beta angle", ["sat"])
         self.contact = Gauge("sat_ground_contact", "1 if station visible",
                              ["sat", "station"])
         self.buffer = Gauge("sat_data_buffer_percent", "Onboard data buffer fill",
@@ -179,9 +231,14 @@ class PromSink:
         p, o, a = tele["power"], tele["orbit"], tele["attitude"]
         self.soc.labels(sat).set(p["battery_soc_pct"])
         self.volt.labels(sat).set(p["bus_voltage_v"])
+        self.solar.labels(sat).set(p["solar_generation_w"])
+        self.net_pwr.labels(sat).set(p["net_power_w"])
+        self.heater.labels(sat).set(p["heater_on"])
         self.point_err.labels(sat).set(a["pointing_error_deg"])
+        self.rw_rpm.labels(sat).set(a["reaction_wheel_rpm"])
         self.downlink.labels(sat).set(tele["comms"]["downlink_rate_mbps"])
         self.eclipse.labels(sat).set(1 if o["eclipse"] else 0)
+        self.beta.labels(sat).set(o["beta_deg"])
         self.buffer.labels(sat).set(buffer_pct)
         self.altitude.labels(sat).set(o["alt_km"])
         for zone, t in tele["thermal"].items():
