@@ -10,12 +10,13 @@ satellite:
 power:
   battery_capacity_wh: 200.0     # バッテリ容量
   initial_soc_pct: 78.0
-  solar_generation_w: 165.0      # 日照時の最大発電（食時放電とほぼ釣り合う設計）
+  solar_generation_w: 165.0      # 日照時の最大発電 (β角補正前)
   base_load_w: 95.0              # 常時負荷
   comms_load_w: 40.0             # ダウンリンク時の追加負荷
   payload_load_w: 60.0           # 撮像時の追加負荷
   bus_voltage_full_v: 29.4       # SoC100%時
   bus_voltage_empty_v: 24.0      # SoC0%時
+  battery_heater_w: 8.0          # バッテリヒータ消費電力 (5°C以下で投入)
 
 thermal:
   # ゾーンごとの [日照時平衡温度, 食時平衡温度, 時定数(sim秒)]

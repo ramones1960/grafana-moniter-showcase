@@ -4,6 +4,13 @@
 DB 書き込みのタイムスタンプは実時刻 (utcnow) を使う。
 これにより 1 周回 (~95分) が実時間 ~95秒 で進み、Grafana の
 「直近N分」表示と自然に噛み合う。
+
+改善点:
+- β角を PowerModel に渡し、太陽発電量を現実的に変動させる
+- 食移行フラグを AttitudeModel に渡し、熱スナップ外乱を再現
+- 実際の太陽発電量・ヒータ状態をテレメトリに追加
+- 将来 5 周回分のコンタクトウィンドウを定期的に予測・DB 格納
+- 地上局仰角に加えて方位角も記録する
 """
 from __future__ import annotations
 
@@ -19,6 +26,9 @@ from sinks import InfluxSink, PromSink, TimescaleSink, utcnow
 from subsystems import AttitudeModel, CommsModel, PowerModel, ThermalModel
 
 HERE = os.path.dirname(__file__)
+
+# パス予測を再計算するシミュレーション時間間隔 [周回数]
+PRED_INTERVAL_ORBITS = 4
 
 
 def haversine_km(lat1, lon1, lat2, lon2) -> float:
@@ -62,12 +72,18 @@ class Simulator:
         self._kpi_accum = {"downlinked_mb": 0.0, "captures": 0}
         self._last_kpi_real = time.time()
 
-    # ── 地上局可視判定 ───────────────────────────────
+        # パス予測スケジュール
+        self._pred_interval_sim = PRED_INTERVAL_ORBITS * self.orbit.period_s
+        self._last_pred_sim_t = -self._pred_interval_sim  # 起動直後に即実行
+        self._sim_start: float = 0.0  # wall clock 起動時刻 (run() で設定)
+
+    # ── 地上局可視判定 (仰角 + 方位角) ─────────────────
     def visible_stations(self, sat_ecef) -> dict:
         out = {}
         for code, meta in self.tsdb.station_meta.items():
             el = self.orbit.elevation_deg(sat_ecef, meta["lat"], meta["lon"])
-            out[code] = {"el": el, "visible": el >= meta["min_el"]}
+            az = self.orbit.azimuth_deg(sat_ecef, meta["lat"], meta["lon"])
+            out[code] = {"el": el, "az": az, "visible": el >= meta["min_el"]}
         return out
 
     # ── 地球観測撮像トリガ ───────────────────────────
@@ -102,8 +118,11 @@ class Simulator:
             code = best[0]
             pid = self.tsdb.open_pass(self.sat, code, now)
             self.active_pass = {"id": pid, "code": code, "aos": now,
-                                "max_el": best[1]["el"], "downlinked_mb": 0.0}
-            print(f"[sim] AOS {code} (el={best[1]['el']:.1f})", flush=True)
+                                "max_el": best[1]["el"],
+                                "rise_az": best[1]["az"],
+                                "downlinked_mb": 0.0}
+            print(f"[sim] AOS {code} (el={best[1]['el']:.1f}° az={best[1]['az']:.0f}°)",
+                  flush=True)
         elif self.active_pass is not None:
             ap = self.active_pass
             ap["downlinked_mb"] += downlinked_now_mb
@@ -111,13 +130,31 @@ class Simulator:
             if still:
                 ap["max_el"] = max(ap["max_el"], vis[ap["code"]]["el"])
             else:
+                set_az = vis[ap["code"]]["az"]
                 self.tsdb.close_pass(ap["id"], ap["aos"], now, ap["max_el"],
-                                     ap["downlinked_mb"])
+                                     ap["downlinked_mb"],
+                                     ap.get("rise_az", 0.0), set_az)
                 self.tsdb.mark_downlinked(self.sat)
                 self._kpi_accum["downlinked_mb"] += ap["downlinked_mb"]
-                print(f"[sim] LOS {ap['code']} max_el={ap['max_el']:.1f} "
+                print(f"[sim] LOS {ap['code']} max_el={ap['max_el']:.1f}° "
                       f"dl={ap['downlinked_mb']:.0f}MB", flush=True)
                 self.active_pass = None
+
+    # ── 将来パス予測 & DB 格納 ────────────────────────
+    def refresh_pass_predictions(self, sim_t: float):
+        print("[sim] パス予測計算中...", flush=True)
+        predictions = self.orbit.predict_passes(
+            self.tsdb.station_meta,
+            t_start=sim_t,
+            n_orbits=5,
+            step_s=20.0,
+        )
+        self.tsdb.insert_predicted_passes(
+            self.sat, predictions,
+            time_scale=self.time_scale,
+            wall_start=self._sim_start,
+        )
+        print(f"[sim] {len(predictions)} パス予測を格納", flush=True)
 
     # ── アラート → anomalies テーブル ────────────────
     def check_anomalies(self, tele, now, buffer_pct):
@@ -144,6 +181,8 @@ class Simulator:
         print(f"[sim] start: period={self.orbit.period_s/60:.1f}min "
               f"time_scale={self.time_scale}", flush=True)
         start = time.time()
+        self._sim_start = start  # wall clock 起動時刻を保存
+
         while True:
             sim_t = (time.time() - start) * self.time_scale
             dt = self.interval * self.time_scale
@@ -168,9 +207,9 @@ class Simulator:
 
             # ── サブシステム更新 ──
             downlinking = in_pass and has_data
-            self.power.step(dt, eclipse, downlinking, imaging)
+            self.power.step(dt, eclipse, downlinking, imaging, beta_deg=beta)
             self.thermal.step(dt, eclipse)
-            self.attitude.step(dt, sim_t)
+            self.attitude.step(dt, sim_t, eclipse=eclipse)
             rate = self.comms.step(cur_el, in_pass, has_data)
 
             # ダウンリンク量 [MB] = rate[Mbps] * dt[s] / 8
@@ -188,9 +227,9 @@ class Simulator:
                     "bus_voltage_v": round(self.power.bus_voltage, 3),
                     "battery_soc_pct": round(self.power.soc, 2),
                     "battery_temp_c": round(self.power.battery_temp, 2),
-                    "net_power_w": round(
-                        (0 if eclipse else self.cfg["power"]["solar_generation_w"])
-                        - self.cfg["power"]["base_load_w"], 1),
+                    "solar_generation_w": round(self.power.solar_generation_w, 1),
+                    "net_power_w": round(self.power.net_power_w, 1),
+                    "heater_on": 1 if self.power.heater_on else 0,
                 },
                 "thermal": {z: round(t, 2) for z, t in self.thermal.temp.items()},
                 "attitude": {
@@ -199,6 +238,7 @@ class Simulator:
                     "pitch_rate_dps": round(self.attitude.rates[1], 4),
                     "yaw_rate_dps": round(self.attitude.rates[2], 4),
                     "reaction_wheel_rpm": round(self.attitude.rw_rpm, 1),
+                    "desaturating": 1 if self.attitude.desatting else 0,
                 },
                 "comms": {
                     "station": cur_code,
@@ -225,12 +265,19 @@ class Simulator:
                 self.tsdb.add_kpi(self.sat, now, "data_buffer_pct", buffer_pct)
                 self.tsdb.add_kpi(self.sat, now, "battery_soc_pct",
                                   self.power.soc)
+                self.tsdb.add_kpi(self.sat, now, "solar_generation_w",
+                                  self.power.solar_generation_w)
                 self.tsdb.add_kpi(self.sat, now, "downlinked_mb_30s",
                                   self._kpi_accum["downlinked_mb"])
                 self.tsdb.add_kpi(self.sat, now, "captures_30s",
                                   self._kpi_accum["captures"])
                 self._kpi_accum = {"downlinked_mb": 0.0, "captures": 0}
                 self._last_kpi_real = time.time()
+
+            # ── パス予測更新 (N周回毎) ──
+            if sim_t - self._last_pred_sim_t >= self._pred_interval_sim:
+                self.refresh_pass_predictions(sim_t)
+                self._last_pred_sim_t = sim_t
 
             time.sleep(self.interval)
 

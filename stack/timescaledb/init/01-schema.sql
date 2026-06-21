@@ -1,5 +1,5 @@
 -- 地上局 / ミッション運用台帳スキーマ (TimescaleDB)
--- 模擬テレメトリ生成器が passes / eo_captures / mission_kpi / anomalies に書き込む。
+-- 模擬テレメトリ生成器が各テーブルに書き込む。
 
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
@@ -28,6 +28,8 @@ CREATE TABLE passes (
     aos              TIMESTAMPTZ NOT NULL,          -- Acquisition of Signal
     los              TIMESTAMPTZ,                    -- Loss of Signal (NULL=進行中)
     max_elevation_deg DOUBLE PRECISION,
+    rise_az_deg      DOUBLE PRECISION,              -- AOS 時方位角
+    set_az_deg       DOUBLE PRECISION,              -- LOS 時方位角
     duration_s       INTEGER,
     data_downlinked_mb DOUBLE PRECISION DEFAULT 0,
     status           TEXT NOT NULL DEFAULT 'in_progress', -- in_progress|completed
@@ -35,6 +37,27 @@ CREATE TABLE passes (
 );
 SELECT create_hypertable('passes', 'aos', if_not_exists => TRUE);
 CREATE INDEX ON passes (station_id, aos DESC);
+CREATE INDEX ON passes (sat, status, aos DESC);
+
+-- ── 予測コンタクトウィンドウ ─────────────────────────
+-- シミュレータが定期的に将来 5 周回分のパスを事前計算して格納する。
+-- Grafana の「次回パス」「予定コンタクト」表示に使用。
+CREATE TABLE predicted_passes (
+    id               BIGSERIAL,
+    sat              TEXT NOT NULL,
+    station_id       INTEGER NOT NULL REFERENCES ground_stations(id),
+    t_aos            TIMESTAMPTZ NOT NULL,   -- 予測 AOS (実UTC)
+    t_los            TIMESTAMPTZ NOT NULL,   -- 予測 LOS (実UTC)
+    max_elevation_deg DOUBLE PRECISION,
+    rise_az_deg      DOUBLE PRECISION,       -- AOS 時方位角 [deg, N=0°]
+    max_az_deg       DOUBLE PRECISION,       -- 最大仰角時方位角 [deg]
+    set_az_deg       DOUBLE PRECISION,       -- LOS 時方位角 [deg]
+    duration_s       INTEGER,                -- パス継続時間 [実秒]
+    computed_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (id, t_aos)
+);
+SELECT create_hypertable('predicted_passes', 't_aos', if_not_exists => TRUE);
+CREATE INDEX ON predicted_passes (sat, t_aos);
 
 -- ── 地球観測キャプチャ ───────────────────────────────
 CREATE TABLE eo_captures (
